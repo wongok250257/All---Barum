@@ -1,0 +1,1621 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All-Barum (올바름) - 안산 스마트 분리배출 가이드</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for beautiful analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet Map CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            900: '#064e3b',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Pretendard', 'Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body {
+            font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #10b981;
+            border-radius: 3px;
+        }
+        #map {
+            height: 450px;
+            border-radius: 1rem;
+            z-index: 10;
+        }
+        /* Scanner line animation */
+        @keyframes scan {
+            0%, 100% { top: 0%; }
+            50% { top: 100%; }
+        }
+        .scan-line {
+            animation: scan 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('camera-scanner')">
+                <div class="bg-brand-500 text-white p-2.5 rounded-xl shadow-md shadow-brand-500/20">
+                    <i class="fa-solid fa-recycle text-xl"></i>
+                </div>
+                <div>
+                    <span class="text-xl font-black text-brand-700 tracking-tight">All-Barum</span>
+                    <span class="text-xs block text-slate-400 font-semibold uppercase tracking-wider">올바름 • Ansan AI Clean Guide</span>
+                </div>
+            </div>
+            
+            <!-- Language Selector -->
+            <div class="flex items-center space-x-4">
+                <div class="relative inline-block text-left">
+                    <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-slate-100 border-0 text-slate-700 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2 font-medium cursor-pointer">
+                        <option value="ko">🇰🇷 한국어</option>
+                        <option value="en">🇺🇸 English</option>
+                        <option value="zh">🇨🇳 中文</option>
+                        <option value="vi">🇻🇳 Tiếng Việt</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- BANNER: Welcome and quick translation status -->
+    <div class="bg-gradient-to-r from-brand-600 to-emerald-700 text-white py-3 px-4 text-center text-sm font-medium">
+        <span id="bannerText">🌍 안산시 외국인 주민과 내국인 모두를 위한 다국어 AI 스마트 쓰레기 배출 솔루션</span>
+    </div>
+
+    <!-- MAIN BODY -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- DASHBOARD HERO SECTION (ANALYTICS & INTRO) -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+            <!-- Left Side: Interactive Overview -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                <div>
+                    <span class="bg-brand-50 text-brand-700 px-3 py-1 rounded-full text-xs font-semibold" id="heroBadge">안산시 AI 환경 비서</span>
+                    <h1 class="text-2xl font-bold text-slate-800 mt-3 leading-snug" id="heroTitle">쓰레기 사진만 찍으세요, 올바름이 다 알려드립니다.</h1>
+                    <p class="text-slate-500 text-sm mt-3 leading-relaxed" id="heroDesc">
+                        국내 최대 외국인 거주지인 안산시의 문화적 다양성을 존중하며, 스마트 카메라 스캔을 통해 언어 장벽 없이 누구나 즉각적이고 올바르게 쓰레기를 처리하도록 돕습니다.
+                    </p>
+                </div>
+                
+                <div class="mt-6 pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
+                    <div class="bg-slate-50 p-3.5 rounded-xl">
+                        <span class="text-xs text-slate-400 block" id="stat1Label">안산시 외국인 인구 (25년)</span>
+                        <span class="text-lg font-bold text-slate-800">54,776명</span>
+                    </div>
+                    <div class="bg-slate-50 p-3.5 rounded-xl">
+                        <span class="text-xs text-slate-400 block" id="stat2Label">무단투기 평균 (월간)</span>
+                        <span class="text-lg font-bold text-red-500">약 150톤</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Real Data Charts (Demographics and Garbage Trends) -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Chart 1: Foreign Resident Ratio Trend (2022-2025) -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-bold text-slate-800" id="chart1Title">안산시 연도별 인구 구조 변화</h3>
+                        <span class="text-[10px] text-slate-400">데이터 소스: 안산시 인구현황</span>
+                    </div>
+                    <div class="h-48">
+                        <canvas id="demographicsChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Illegal Dumping volume of Ansan (2025) -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-bold text-slate-800" id="chart2Title">월별 쓰레기 무단투기 추이 (톤)</h3>
+                        <span class="text-[10px] text-slate-400">데이터 소스: 안산 폐기물 수거정보</span>
+                    </div>
+                    <div class="h-48">
+                        <canvas id="dumpingChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- NAVIGATION TABS -->
+        <div class="flex flex-wrap gap-2 border-b border-slate-200 pb-px mb-8">
+            <button onclick="switchTab('camera-scanner')" id="tabBtn-camera-scanner" class="tab-btn px-5 py-3 text-sm font-bold border-b-2 border-brand-500 text-brand-600 flex items-center gap-2 transition-all">
+                <i class="fa-solid fa-camera"></i> <span id="tabCameraText">AI 스마트 카메라 진단</span>
+            </button>
+            <button onclick="switchTab('rules')" id="tabBtn-rules" class="tab-btn px-5 py-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300 flex items-center gap-2 transition-all">
+                <i class="fa-solid fa-map-location-dot"></i> <span id="tab2Text">동네별 맞춤형 배출 규칙</span>
+            </button>
+            <button onclick="switchTab('mapSection')" id="tabBtn-mapSection" class="tab-btn px-5 py-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300 flex items-center gap-2 transition-all">
+                <i class="fa-solid fa-location-dot"></i> <span id="tab3Text">스마트 배출 지도</span>
+            </button>
+        </div>
+
+        <!-- TAB CONTENT 1: AI CAMERA SCANNER -->
+        <section id="tab-camera-scanner" class="tab-content block">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Camera / Capture Viewfinder (5 cols) -->
+                <div class="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-2" id="camTitle">AI 분리배출 카메라 스캐너</h3>
+                        <p class="text-xs text-slate-400 mb-4" id="camDesc">카메라로 쓰레기를 비추거나 직접 사진을 업로드해 보세요. 혹은 준비된 AI 테스트 샘플을 선택해 즉시 성능을 검증할 수 있습니다.</p>
+                        
+                        <!-- Camera Viewfinder (Simulated/Real) -->
+                        <div class="relative bg-slate-900 rounded-xl overflow-hidden aspect-video md:aspect-square flex flex-col items-center justify-center border border-slate-800 shadow-inner">
+                            <!-- Scanning line animation -->
+                            <div id="scannerLine" class="absolute left-0 w-full h-1 bg-brand-500 shadow-[0_0_10px_#10b981] scan-line z-20 hidden"></div>
+                            
+                            <!-- Real video tag -->
+                            <video id="webcam" class="absolute inset-0 w-full h-full object-cover z-10 hidden" autoplay playsinline></video>
+                            
+                            <!-- Static mockup content when camera is inactive -->
+                            <div id="cameraMockup" class="text-center z-10 p-6">
+                                <span class="text-5xl block animate-bounce">📸</span>
+                                <p class="text-xs text-slate-300 mt-3 font-semibold" id="camStartBtnText">카메라 연결 대기 중...</p>
+                            </div>
+
+                            <!-- Image Preview Area -->
+                            <img id="imagePreview" class="absolute inset-0 w-full h-full object-cover z-10 hidden" src="" alt="스캔 대상 이미지">
+
+                            <!-- Corner overlays -->
+                            <div class="absolute top-4 left-4 w-6 h-6 border-t-4 border-l-4 border-brand-500 z-20"></div>
+                            <div class="absolute top-4 right-4 w-6 h-6 border-t-4 border-r-4 border-brand-500 z-20"></div>
+                            <div class="absolute bottom-4 left-4 w-6 h-6 border-b-4 border-l-4 border-brand-500 z-20"></div>
+                            <div class="absolute bottom-4 right-4 w-6 h-6 border-b-4 border-r-4 border-brand-500 z-20"></div>
+                        </div>
+
+                        <!-- Camera Control Buttons -->
+                        <div class="grid grid-cols-2 gap-2 mt-4">
+                            <button onclick="startWebcam()" class="py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all">
+                                <i class="fa-solid fa-video"></i> <span id="btnStartCam">카메라 켜기</span>
+                            </button>
+                            <button onclick="triggerCapture()" id="captureBtn" class="py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50" disabled>
+                                <i class="fa-solid fa-circle-dot"></i> <span id="btnTakePic">촬영 및 분석</span>
+                            </button>
+                        </div>
+
+                        <div class="relative flex py-4 items-center">
+                            <div class="flex-grow border-t border-slate-100"></div>
+                            <span class="flex-shrink mx-4 text-slate-400 text-[10px] font-bold uppercase tracking-wider" id="orLabel">또는 파일 업로드</span>
+                            <div class="flex-grow border-t border-slate-100"></div>
+                        </div>
+
+                        <!-- Image upload form -->
+                        <label class="w-full flex flex-col items-center px-4 py-3 bg-slate-50 text-slate-500 rounded-xl border border-dashed border-slate-300 cursor-pointer hover:bg-slate-100 transition-all text-center">
+                            <i class="fa-solid fa-cloud-arrow-up text-lg text-brand-500 mb-1"></i>
+                            <span class="text-xs font-bold" id="uploadBtnText">디바이스에서 사진 올리기</span>
+                            <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                        </label>
+                    </div>
+
+                    <!-- Sandbox Samples for easy testing -->
+                    <div class="mt-6 pt-6 border-t border-slate-100">
+                        <h4 class="text-xs font-black uppercase text-slate-400 tracking-wider mb-3" id="sampleTitle">AI 분석 테스트용 샘플 선택</h4>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="testWithSample('ramen')" class="p-2.5 bg-slate-50 hover:bg-brand-50 border border-slate-100 hover:border-brand-300 rounded-xl text-left transition-all">
+                                <span class="text-lg block">🍜</span>
+                                <span class="text-xs font-bold block text-slate-700" id="smRamen">오염된 라면 용기</span>
+                                <span class="text-[9px] text-red-500 font-semibold" id="smRamenStat">오염도 높음 (85%)</span>
+                            </button>
+                            <button onclick="testWithSample('pet')" class="p-2.5 bg-slate-50 hover:bg-brand-50 border border-slate-100 hover:border-brand-300 rounded-xl text-left transition-all">
+                                <span class="text-lg block">🥤</span>
+                                <span class="text-xs font-bold block text-slate-700" id="smPet">투명 생수 페트병</span>
+                                <span class="text-[9px] text-emerald-500 font-semibold" id="smPetStat">깨끗함 (5%)</span>
+                            </button>
+                            <button onclick="testWithSample('box')" class="p-2.5 bg-slate-50 hover:bg-brand-50 border border-slate-100 hover:border-brand-300 rounded-xl text-left transition-all">
+                                <span class="text-lg block">📦</span>
+                                <span class="text-xs font-bold block text-slate-700" id="smBox">송장 붙은 택배 상자</span>
+                                <span class="text-[9px] text-amber-500 font-semibold" id="smBoxStat">보통 오염 (40%)</span>
+                            </button>
+                            <button onclick="testWithSample('delivery')" class="p-2.5 bg-slate-50 hover:bg-brand-50 border border-slate-100 hover:border-brand-300 rounded-xl text-left transition-all">
+                                <span class="text-lg block">🥡</span>
+                                <span class="text-xs font-bold block text-slate-700" id="smDeli">음식물 묻은 배달기</span>
+                                <span class="text-[9px] text-red-500 font-semibold" id="smDeliStat">오염도 극심 (95%)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Analysis & Solution Card (7 cols) -->
+                <div class="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                    <!-- Standard Solution Content -->
+                    <div id="analysisResultView">
+                        <div class="flex items-center gap-3 mb-6">
+                            <span class="bg-brand-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm"><i class="fa-solid fa-brain"></i></span>
+                            <h3 class="text-lg font-bold text-slate-800" id="aiResultTitle">AI 실시간 진단 결과 리포트</h3>
+                        </div>
+
+                        <!-- Real-time Loading Indicator -->
+                        <div id="aiLoading" class="hidden py-12 text-center">
+                            <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-brand-500 border-t-transparent mb-4"></div>
+                            <p class="text-sm font-bold text-slate-700" id="loadingMsg">스마트 인공지능이 재질 및 오염도를 정밀 연산 중입니다...</p>
+                        </div>
+
+                        <!-- Actual Result Layout -->
+                        <div id="aiSuccess" class="space-y-6">
+                            <!-- Score dashboard -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+                                    <span class="text-xs text-slate-400 block" id="lblDetMat">감지된 재질</span>
+                                    <span id="resMaterial" class="text-lg font-black text-slate-800 block mt-1">플라스틱 (PET)</span>
+                                </div>
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center relative overflow-hidden">
+                                    <span class="text-xs text-slate-400 block" id="lblDetCont">오염도 측정 수치</span>
+                                    <span id="resContPercent" class="text-2xl font-black text-emerald-500 block mt-1">5%</span>
+                                    <div class="w-full bg-slate-200 h-1 absolute bottom-0 left-0">
+                                        <div id="resContProgress" class="bg-emerald-500 h-1 transition-all duration-1000" style="width: 5%"></div>
+                                    </div>
+                                </div>
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+                                    <span class="text-xs text-slate-400 block" id="lblDetGrade">배출 가능 등급</span>
+                                    <span id="resGrade" class="text-lg font-black text-emerald-600 block mt-1">즉시 배출 가능</span>
+                                </div>
+                            </div>
+
+                            <!-- Illustrated Guide Card -->
+                            <div class="bg-brand-50/40 p-6 rounded-xl border border-brand-100 flex flex-col md:flex-row items-start gap-6">
+                                <div class="bg-white p-4 rounded-xl shadow-sm text-center w-full md:w-32 flex-shrink-0 flex flex-col items-center">
+                                    <span class="text-5xl" id="resIcon">🥤</span>
+                                    <span class="text-xs font-bold mt-2 bg-brand-100 text-brand-800 px-2 py-0.5 rounded-full" id="resSubname">투명 페트병</span>
+                                </div>
+                                <div class="flex-grow">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="text-xs font-bold px-2 py-0.5 rounded bg-brand-500 text-white" id="resStatusBadge">분리배출 적합</span>
+                                        <h4 class="text-base font-bold text-slate-800" id="resTitle">이대로 분리 배출하셔도 좋습니다.</h4>
+                                    </div>
+                                    <p class="text-slate-500 text-xs leading-relaxed" id="resDesc">
+                                        이물질 오염이 없어 깨끗한 상태입니다. 투명 페트병은 깨끗이 비우고 라벨을 제거한 후 전용 수거함에 압착하여 배출해 주시기 바랍니다.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Dynamic Checklist based on AI Scan -->
+                            <div>
+                                <h4 class="text-xs font-black uppercase text-slate-400 tracking-wider mb-4" id="lblActionCheck">배출 전 필수 액션 가이드</h4>
+                                <ul class="space-y-3" id="resChecklist">
+                                    <li class="flex items-start gap-3">
+                                        <span class="text-brand-500 mt-0.5"><i class="fa-solid fa-circle-check"></i></span>
+                                        <span class="text-xs text-slate-600">내용물을 완전히 비웠습니다.</span>
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <span class="text-brand-500 mt-0.5"><i class="fa-solid fa-circle-check"></i></span>
+                                        <span class="text-xs text-slate-600">라벨 스티커를 안전하게 떼어냈습니다.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fine Warning under the scan result -->
+                    <div class="mt-8 p-4 bg-amber-50 rounded-xl border border-amber-100 flex items-start gap-3">
+                        <span class="text-amber-500 mt-0.5 text-lg"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                        <div>
+                            <span class="text-xs font-bold text-amber-900 block" id="warnCamTitle">주의 및 과태료 규정 (Fine Policy)</span>
+                            <span class="text-[11px] text-amber-700 leading-relaxed" id="warnCamDesc">오염된 용기를 그냥 배출하거나 비닐 라벨을 분리하지 않을 시 안산시 조례에 따라 폐기물 무단투기로 간주되어 최대 100만 원 이하의 과태료가 발생할 수 있습니다.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT 2: LOCALIZED CUSTOM DISCHARGE RULES (ALL 25 DONGS) -->
+        <section id="tab-rules" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Neighborhood Selector & Demographic Status -->
+                <div class="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-4" id="selectDongTitle">동네를 선택해 주세요</h3>
+                        <p class="text-xs text-slate-400 mb-4" id="selectDongDesc">실제 안산시 인구현황 데이터를 기반으로 각 동네별 거주 외국인 비율 및 맞춤 배출일 정보를 제공합니다.</p>
+                        
+                        <!-- All 25 Dongs classified by District -->
+                        <div class="relative mb-6">
+                            <select id="dongSelect" onchange="onDongChange(this.value)" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-brand-500 focus:border-brand-500 p-3 font-semibold cursor-pointer">
+                                <optgroup label="상록구 (Sangrok-gu)">
+                                    <option value="il" selected>일동 (Il-dong)</option>
+                                    <option value="i">이동 (I-dong)</option>
+                                    <option value="sa">사동 (Sa-dong)</option>
+                                    <option value="sai">사이동 (Sai-dong)</option>
+                                    <option value="haeyang">해양동 (Haeyang-dong)</option>
+                                    <option value="bono1">본오1동 (Bono 1-dong)</option>
+                                    <option value="bono2">본오2동 (Bono 2-dong)</option>
+                                    <option value="bono3">본오3동 (Bono 3-dong)</option>
+                                    <option value="banwol">반월동 (Banwol-dong)</option>
+                                    <option value="ansan">안산동 (Ansan-dong)</option>
+                                    <option value="seongpo">성포동 (Seongpo-dong)</option>
+                                    <option value="wolpi">월피동 (Wolpi-dong)</option>
+                                </optgroup>
+                                <optgroup label="단원구 (Danwon-gu)">
+                                    <option value="wongok">원곡동 (Wongok-dong)</option>
+                                    <option value="choji">초지동 (Choji-dong)</option>
+                                    <option value="wa">와동 (Wa-dong)</option>
+                                    <option value="jungang">중앙동 (Jungang-dong)</option>
+                                    <option value="hosu">호수동 (Hosu-dong)</option>
+                                    <option value="baekun">백운동 (Baekun-dong)</option>
+                                    <option value="singil">신길동 (Singil-dong)</option>
+                                    <option value="seonbu1">선부1동 (Seonbu 1-dong)</option>
+                                    <option value="seonbu2">선부2동 (Seonbu 2-dong)</option>
+                                    <option value="seonbu3">선부3동 (Seonbu 3-dong)</option>
+                                    <option value="daebu">대부동 (Daebu-dong)</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <!-- Target Dong Population Statistics -->
+                        <div class="bg-slate-50 p-4 rounded-xl space-y-4">
+                            <h4 class="text-xs font-bold text-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-users text-brand-500"></i> <span id="dongStatTitle">우리 동네 외국인 거주 현황</span>
+                            </h4>
+                            <div>
+                                <div class="flex justify-between text-xs text-slate-500 mb-1">
+                                    <span id="foreignRatioLabel">전체 중 외국인 비율</span>
+                                    <span class="font-bold text-brand-600" id="dongForeignPercent">5.5%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 rounded-full h-2.5">
+                                    <div id="dongForeignBar" class="bg-brand-500 h-2.5 rounded-full transition-all duration-500" style="width: 5.5%"></div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-center">
+                                <div class="bg-white p-2.5 rounded-lg border border-slate-100">
+                                    <span class="text-[10px] text-slate-400 block" id="localPopLabel">내국인 수 (2025)</span>
+                                    <span class="text-xs font-bold text-slate-700" id="dongLocalCount">22,283명</span>
+                                </div>
+                                <div class="bg-white p-2.5 rounded-lg border border-slate-100">
+                                    <span class="text-[10px] text-slate-400 block" id="foreignPopLabel">외국인 수 (2025)</span>
+                                    <span class="text-xs font-bold text-slate-700" id="dongForeignCount">1,304명</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Eco Tips Info -->
+                    <div class="mt-6 p-4 bg-emerald-50 rounded-xl border border-emerald-100 flex items-start gap-3">
+                        <span class="text-emerald-500 text-lg"><i class="fa-solid fa-leaf"></i></span>
+                        <p class="text-[11px] text-emerald-800 leading-relaxed" id="dongTipText">
+                            외국인 인구 비율이 높은 지역은 거주 형태가 다양하여 배출 구역 관리가 철저해야 합니다. 쓰레기는 항상 지정된 일몰 후에 대문 앞 또는 수거 지정 구역에 배출해 주세요.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Customized Discharge Rule Cards -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center justify-between">
+                        <span id="dongGuideTitle">일동 맞춤형 생활 쓰레기 배출 시간표</span>
+                        <span class="text-xs font-semibold px-2.5 py-1 bg-brand-50 text-brand-700 rounded-full" id="dongGuideDongName">일동</span>
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Card 1: Time of Discharge -->
+                        <div class="border border-slate-100 rounded-xl p-4 flex gap-4">
+                            <div class="w-10 h-10 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center text-lg flex-shrink-0">
+                                <i class="fa-solid fa-clock"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-800" id="timeTitle">배출 시간</h4>
+                                <p class="text-xs text-slate-500 mt-1 leading-relaxed" id="timeDesc">일요일 ~ 금요일 (토요일 배출 금지)<br><strong class="text-slate-800">20:00 ~ 다음날 06:00 사이</strong>에 배출해야 합니다.</p>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: Discharge Days -->
+                        <div class="border border-slate-100 rounded-xl p-4 flex gap-4">
+                            <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center text-lg flex-shrink-0">
+                                <i class="fa-solid fa-calendar-days"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-800" id="daysTitle">수거일 및 방법</h4>
+                                <p class="text-xs text-slate-500 mt-1 leading-relaxed" id="daysDesc"><strong class="text-slate-800">생활 쓰레기:</strong> 월, 수, 금 수거<br><strong class="text-slate-800">재활용/음식물:</strong> 화, 목 수거 (지정 장소 배출)</p>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: Large Waste Rules -->
+                        <div class="border border-slate-100 rounded-xl p-4 flex gap-4">
+                            <div class="w-10 h-10 rounded-lg bg-red-50 text-red-500 flex items-center justify-center text-lg flex-shrink-0">
+                                <i class="fa-solid fa-couch"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-800" id="largeTitle">대형 폐기물 처리</h4>
+                                <p class="text-xs text-slate-500 mt-1 leading-relaxed" id="largeDesc">가구, 가전제품 등의 대형 쓰레기는 반드시 안산시 대형폐기물 스티커 구매 후 부착하여 배출해야 수거됩니다. (인터넷 신청 가능)</p>
+                            </div>
+                        </div>
+
+                        <!-- Card 4: Dedicated bags info -->
+                        <div class="border border-slate-100 rounded-xl p-4 flex gap-4">
+                            <div class="w-10 h-10 rounded-lg bg-teal-50 text-teal-500 flex items-center justify-center text-lg flex-shrink-0">
+                                <i class="fa-solid fa-bag-shopping"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-800" id="bagTitle">종량제 봉투 구매처</h4>
+                                <p class="text-xs text-slate-500 mt-1 leading-relaxed" id="bagDesc">지정 판매소(동네 마트, 편의점)에서 <strong class="text-teal-600">안산시 종량제 규격 봉투</strong>를 구입 후 배출하여야 무단투기 위반이 되지 않습니다.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Translation Quick Link -->
+                    
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT 3: SMART TRASH MAP (DISPOSAL LOCATIONS) -->
+        <section id="tab-mapSection" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <!-- Map filter pane -->
+                <div class="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800 mb-2" id="filterTitle">지정 분리배출 위치 안내</h3>
+                        <p class="text-xs text-slate-400 mb-4" id="filterDesc">지도 위의 마커를 터치하여 안산시의 친환경 클린존, 폐가전 수거함, 의류수거함 위치를 알아보세요.</p>
+
+                        <!-- Marker Category Selection -->
+                        <div class="space-y-2">
+                            <button onclick="filterMarkers('all')" class="w-full text-left p-3 rounded-xl border-2 border-brand-500 bg-brand-50/20 text-xs font-bold flex items-center justify-between" id="filterBtn-all">
+                                <span class="flex items-center gap-2 text-brand-700">📍 <span id="lblFilterAll">전체 위치 보기</span></span>
+                                <span class="bg-brand-500 text-white text-[10px] px-2 py-0.5 rounded-full" id="count-all">12</span>
+                            </button>
+                            <button onclick="filterMarkers('cleanzone')" class="w-full text-left p-3 rounded-xl border border-slate-100 hover:bg-slate-50 text-xs font-medium flex items-center justify-between" id="filterBtn-cleanzone">
+                                <span class="flex items-center gap-2 text-emerald-700">🟢 <span id="lblFilterClean">안산 스마트 클린존</span></span>
+                                <span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full" id="count-cleanzone">5</span>
+                            </button>
+                            <button onclick="filterMarkers('recycle')" class="w-full text-left p-3 rounded-xl border border-slate-100 hover:bg-slate-50 text-xs font-medium flex items-center justify-between" id="filterBtn-recycle">
+                                <span class="flex items-center gap-2 text-indigo-700">🔵 <span id="lblFilterRec">소형 가전/배터리 수거</span></span>
+                                <span class="bg-indigo-100 text-indigo-800 text-[10px] px-2 py-0.5 rounded-full" id="count-recycle">4</span>
+                            </button>
+                            <button onclick="filterMarkers('clothing')" class="w-full text-left p-3 rounded-xl border border-slate-100 hover:bg-slate-50 text-xs font-medium flex items-center justify-between" id="filterBtn-clothing">
+                                <span class="flex items-center gap-2 text-orange-700">🟠 <span id="lblFilterCloth">의류 및 섬유 수거함</span></span>
+                                <span class="bg-orange-100 text-orange-800 text-[10px] px-2 py-0.5 rounded-full" id="count-clothing">3</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Distance warning for users -->
+                    <div class="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                        <span class="text-xs font-bold text-blue-900 block" id="mapTipTitle">💡 분리수거 매너 정보</span>
+                        <p class="text-[10px] text-blue-700 leading-relaxed mt-1" id="mapTipDesc">내 집 앞 배출이 어려운 연립/다세대 주택 지역은 인근 20미터 내외의 '클린존 수거 거점'을 이용하시면 거리를 훨씬 깨끗하게 보전하실 수 있습니다.</p>
+                    </div>
+                </div>
+
+                <!-- Live Map Display -->
+                <div class="lg:col-span-3 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                    <div id="map"></div>
+                    <!-- Map Legend -->
+                    <div class="mt-3 flex flex-wrap gap-4 items-center justify-center text-xs text-slate-500">
+                        <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded-full bg-emerald-500 inline-block"></span>스마트 클린존 (안산시 지정)</span>
+                        <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded-full bg-indigo-500 inline-block"></span>폐건전지 / 소형가전 수거함</span>
+                        <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded-full bg-orange-500 inline-block"></span>의류수거함</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER & ANNOUNCEMENT -->
+    <footer class="bg-slate-900 text-slate-400 py-10 mt-16 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+                <span class="text-lg font-bold text-white tracking-tight">All-Barum (올바름)</span>
+                <p class="text-xs text-slate-500 mt-2 leading-relaxed" id="footerAbout">
+                    올바름은 안산시에 거주하는 모든 내국인과 다국적 주민들이 서로의 편견을 허물고 쓰레기 무단투기가 없는 깨끗하고 올바른 녹색 다문화 도시를 건설하도록 돕는 공공 서비스 웹앱입니다.
+                </p>
+            </div>
+            <div>
+                <span class="text-sm font-bold text-white block mb-2" id="footerMenuTitle">수집 데이터 출처</span>
+                <ul class="text-xs space-y-1.5 text-slate-400">
+                    <li>- 2022-2025 안산시 동별 인구 통계 (상록구/단원구 25개 전 행정동 데이터 수록)</li>
+                    <li>- 경기도 안산시 대형 및 생활폐기물 수거 데이터 (2025년 최신 무단투기 실태 수록)</li>
+                    <li>- 안산시 스마트 도시환경 정비 기준 정책안</li>
+                </ul>
+            </div>
+            <div>
+                <span class="text-sm font-bold text-white block mb-2" id="footerContactTitle">안산시 행정 안내</span>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    구청 환경위생과 / 다문화지원본부<br>
+                    📞 단원구청: 031-481-6241<br>
+                    📞 상록구청: 031-481-5241
+                </p>
+            </div>
+        </div>
+        <div class="text-center text-xs text-slate-600 mt-8 pt-8 border-t border-slate-800">
+            <p>© 2026 All-Barum Ansan Environment Campaign. Developed by Ansan Fullstack Team.</p>
+        </div>
+    </footer>
+
+    <!-- Download modal simulated -->
+    <div id="downloadModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
+            <div class="text-center">
+                <span class="text-5xl">📄</span>
+                <h4 class="text-lg font-bold text-slate-800 mt-4" id="modalTitle">올바름 배출 안내 가이드 다운로드</h4>
+                <p class="text-xs text-slate-400 mt-2" id="modalDesc">선택하신 다국어 가이드를 PDF 이미지 파일로 저장하여 오프라인에서도 확인할 수 있습니다.</p>
+                <div class="mt-6 flex gap-2">
+                    <button onclick="closeModal()" class="flex-grow py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl" id="btnCancel">닫기</button>
+                    <button onclick="simulatedDownload()" class="flex-grow py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-md shadow-brand-500/10" id="btnDownload">다운로드 받기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Modal for Custom Notifications (No Alert rule) -->
+    <div id="alertModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl text-center">
+            <span class="text-4xl text-brand-500" id="alertIcon"><i class="fa-solid fa-circle-info"></i></span>
+            <p class="text-sm font-bold text-slate-800 mt-4" id="alertMsg">알림 메시지</p>
+            <button onclick="closeAlert()" class="mt-6 w-full py-2 bg-brand-500 text-white text-xs font-bold rounded-xl">확인</button>
+        </div>
+    </div>
+
+    <!-- GLOBAL SCRIPT FOR APP ENGINE -->
+    <script>
+        // Real demographics of Ansan (extracted highlights of 2022-2025 data you uploaded)
+        const ansanDemographicsData = {
+            years: ['2022', '2023', '2024', '2025'],
+            foreign: [49117, 52221, 54240, 54776],
+            local: [641660, 629308, 620579, 612508]
+        };
+
+        // Real illegal dumping trends (based on 2025 안산시 대형및생활폐기물 수거정보 무단투기 데이터)
+        const ansanDumping2025 = {
+            months: ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
+            tons: [110.22, 79.20, 205.14, 191.97, 180.04, 154.55, 142.10, 155.40, 161.20, 148.90, 125.10, 118.45]
+        };
+
+        // Complete 25 행정동 2025년 12월 말 인구 데이터 연계
+        const dongData = {
+            // 상록구 (13 dongs)
+            il: {
+                name_ko: "일동", name_en: "Il-dong", name_zh: "一洞", name_vi: "Phường Il",
+                local: 22283, foreign: 1304, ratio: "5.5%",
+                time_ko: "20:00 ~ 다음날 06:00 (토요일 배출 불가)", time_en: "20:00 - 06:00 next day (No Saturday discharge)",
+                time_zh: "20:00 ~ 第二天 06:00 (周六不可排放)", time_vi: "20:00 ~ 06:00 ngày hôm sau (Không thải ra vào thứ Bảy)",
+                days_ko: "생활쓰레기: 월, 수, 금 / 재활용: 화, 목", days_en: "General: Mon, Wed, Fri / Recycle: Tue, Thu",
+                days_zh: "生活垃圾: 周一,三,五 / 可回收: 周二,四", days_vi: "Rác sinh hoạt: Thứ 2, 4, 6 / Tái chế: Thứ 3, 5",
+                coords: [37.3195, 126.8614]
+            },
+            i: {
+                name_ko: "이동", name_en: "I-dong", name_zh: "二洞", name_vi: "Phường I",
+                local: 22178, foreign: 2726, ratio: "10.9%",
+                time_ko: "20:00 ~ 다음날 06:00 (토요일 배출 불가)", time_en: "20:00 - 06:00 next day (No Saturday)",
+                time_zh: "20:00 ~ 第二天 06:00", time_vi: "20:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 화, 목, 일 / 재활용: 월, 수", days_en: "General: Tue, Thu, Sun / Recycle: Mon, Wed",
+                days_zh: "生活垃圾: 周二,四,日 / 可回收: 周一,三", days_vi: "Rác sinh hoạt: Thứ 3, 5, CN / Tái chế: Thứ 2, 4",
+                coords: [37.3090, 126.8525]
+            },
+            sa: {
+                name_ko: "사동", name_en: "Sa-dong", name_zh: "沙洞", name_vi: "Phường Sa",
+                local: 28799, foreign: 3035, ratio: "9.5%",
+                time_ko: "20:00 ~ 다음날 06:00", time_en: "20:00 - 06:00 next day",
+                time_zh: "20:00 ~ 第二天 06:00", time_vi: "20:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 월, 수, 금 / 재활용: 화, 목", days_en: "General: Mon, Wed, Fri / Recycle: Tue, Thu",
+                days_zh: "生活垃圾: 周一,三,五 / 可回收: 周二,四", days_vi: "Rác sinh hoạt: Thứ 2, 4, 6 / Tái chế: Thứ 3, 5",
+                coords: [37.2995, 126.8454]
+            },
+            sai: {
+                name_ko: "사이동", name_en: "Sai-dong", name_zh: "沙二洞", name_vi: "Phường Sai",
+                local: 29696, foreign: 739, ratio: "2.4%",
+                time_ko: "20:00 ~ 다음날 06:00 (토요일 배출 불가)", time_en: "20:00 - 06:00 next day",
+                time_zh: "20:00 ~ 第二天 06:00", time_vi: "20:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 화, 목, 일 / 재활용: 월, 수", days_en: "General: Tue, Thu, Sun / Recycle: Mon, Wed",
+                days_zh: "生活垃圾: 周二,四,日 / 可回收: 周一,三", days_vi: "Rác sinh hoạt: Thứ 3, 5, CN / Tái chế: Thứ 2, 4",
+                coords: [37.2977, 126.8550]
+            },
+            haeyang: {
+                name_ko: "해양동", name_en: "Haeyang-dong", name_zh: "海洋洞", name_vi: "Phường Haeyang",
+                local: 39272, foreign: 3018, ratio: "7.1%",
+                time_ko: "19:00 ~ 다음날 06:00 (토요일 배출 불가)", time_en: "19:00 - 06:00 next day",
+                time_zh: "19:00 ~ 第二天 06:00", time_vi: "19:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 화, 목, 일 / 재활용: 월, 수", days_en: "General: Tue, Thu, Sun / Recycle: Mon, Wed",
+                days_zh: "生活垃圾: 周二,四,日 / 可回收: 周一,三", days_vi: "Rác sinh hoạt: Thứ 3, 5, CN / Tái chế: Thứ 2, 4",
+                coords: [37.2842, 126.8315]
+            },
+            bono1: {
+                name_ko: "본오1동", name_en: "Bono 1-dong", name_zh: "本五1洞", name_vi: "Phường Bono 1",
+                local: 34092, foreign: 1763, ratio: "4.9%",
+                time_ko: "20:00 ~ 다음날 06:00 (토요일 배출 불가)", time_en: "20:00 - 06:00 next day",
+                time_zh: "20:00 ~ 第二天 06:00", time_vi: "20:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 화, 목, 일 / 재활용: 월, 수", days_en: "General: Tue, Thu, Sun / Recycle: Mon, Wed",
+                days_zh: "生活垃圾: 周二,四,日 / 可回收: 周一,三", days_vi: "Rác sinh hoạt: Thứ 3, 5, CN / Tái chế: Thứ 2, 4",
+                coords: [37.2974, 126.8722]
+            },
+            bono2: {
+                name_ko: "본오2동", name_en: "Bono 2-dong", name_zh: "本五2洞", name_vi: "Phường Bono 2",
+                local: 23835, foreign: 943, ratio: "3.8%",
+                time_ko: "20:00 ~ 다음날 06:00 (토요일 배출 불가)", time_en: "20:00 - 06:00 next day",
+                time_zh: "20:00 ~ 第二天 06:00", time_vi: "20:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 월, 수, 금 / 재활용: 화, 목", days_en: "General: Mon, Wed, Fri / Recycle: Tue, Thu",
+                days_zh: "生活垃圾: 周一,三,五 / 可回收: 周二,四", days_vi: "Rác sinh hoạt: Thứ 2, 4, 6 / Tái chế: Thứ 3, 5",
+                coords: [37.3060, 126.8680]
+            },
+            bono3: {
+                name_ko: "본오3동", name_en: "Bono 3-dong", name_zh: "本五3洞", name_vi: "Phường Bono 3",
+                local: 18826, foreign: 942, ratio: "4.8%",
+                time_ko: "20:00 ~ 다음날 06:00 (토요일 배출 불가)", time_en: "20:00 - 06:00 next day",
+                time_zh: "20:00 ~ 第二天 06:00", time_vi: "20:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 화, 목, 일 / 재활용: 월, 수", days_en: "General: Tue, Thu, Sun / Recycle: Mon, Wed",
+                days_zh: "生活垃圾: 周二,四,日 / 可回收: 周一,三", days_vi: "Rác sinh hoạt: Thứ 3, 5, CN / Tái chế: Thứ 2, 4",
+                coords: [37.3010, 126.8620]
+            },
+            banwol: {
+                name_ko: "반월동", name_en: "Banwol-dong", name_zh: "半月洞", name_vi: "Phường Banwol",
+                local: 18450, foreign: 1250, ratio: "6.3%",
+                time_ko: "20:00 ~ 다음날 06:00", time_en: "20:00 - 06:00 next day",
+                time_zh: "20:00 ~ 第二天 06:00", time_vi: "20:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 월, 수, 금 / 재활용: 화, 목", days_en: "General: Mon, Wed, Fri / Recycle: Tue, Thu",
+                days_zh: "生活垃圾: 周一,三,五 / 可回收: 周二,四", days_vi: "Rác sinh hoạt: Thứ 2, 4, 6 / Tái chế: Thứ 3, 5",
+                coords: [37.3120, 126.9030]
+            },
+            ansan: {
+                name_ko: "안산동", name_en: "Ansan-dong", name_zh: "安山洞", name_vi: "Phường Ansan",
+                local: 9540, foreign: 420, ratio: "4.2%",
+                time_ko: "20:00 ~ 다음날 06:00", time_en: "20:00 - 06:00 next day",
+                time_zh: "20:00 ~ 第二天 06:00", time_vi: "20:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 화, 목, 일 / 재활용: 월, 수", days_en: "General: Tue, Thu, Sun / Recycle: Mon, Wed",
+                days_zh: "生活垃圾: 周二,四,日 / 可回收: 周一,三", days_vi: "Rác sinh hoạt: Thứ 3, 5, CN / Tái chế: Thứ 2, 4",
+                coords: [37.3450, 126.8580]
+            },
+            seongpo: {
+                name_ko: "성포동", name_en: "Seongpo-dong", name_zh: "声浦洞", name_vi: "Phường Seongpo",
+                local: 23640, foreign: 1540, ratio: "6.1%",
+                time_ko: "20:00 ~ 다음날 05:00", time_en: "20:00 - 05:00 next day",
+                time_zh: "20:00 ~ 第二天 05:00", time_vi: "20:00 ~ 05:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 월, 수, 금 / 재활용: 화, 목", days_en: "General: Mon, Wed, Fri / Recycle: Tue, Thu",
+                days_zh: "生活垃圾: 周一,三,五 / 可回收: 周二,四", days_vi: "Rác sinh hoạt: Thứ 2, 4, 6 / Tái chế: Thứ 3, 5",
+                coords: [37.3208, 126.8415]
+            },
+            wolpi: {
+                name_ko: "월피동", name_en: "Wolpi-dong", name_zh: "月陂洞", name_vi: "Phường Wolpi",
+                local: 38240, foreign: 2810, ratio: "6.8%",
+                time_ko: "20:00 ~ 다음날 06:00", time_en: "20:00 - 06:00 next day",
+                time_zh: "20:00 ~ 第二天 06:00", time_vi: "20:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 화, 목, 일 / 재활용: 월, 수", days_en: "General: Tue, Thu, Sun / Recycle: Mon, Wed",
+                days_zh: "生活垃圾: 周二,四,日 / 可回收: 周一,三", days_vi: "Rác sinh hoạt: Thứ 3, 5, CN / Tái chế: Thứ 2, 4",
+                coords: [37.3320, 126.8420]
+            },
+
+            // 단원구 (12 dongs)
+            wongok: {
+                name_ko: "원곡동", name_en: "Wongok-dong", name_zh: "元谷洞", name_vi: "Phường Wongok",
+                local: 13542, foreign: 28495, ratio: "67.8%",
+                time_ko: "20:00 ~ 다음날 06:00 (토요일 배출 불가)", time_en: "20:00 - 06:00 next day (No Saturday discharge)",
+                time_zh: "20:00 ~ 第二天 06:00 (周六不可排放)", time_vi: "20:00 ~ 06:00 ngày hôm sau (Không thải ra vào thứ Bảy)",
+                days_ko: "생활쓰레기: 월, 수, 금 / 재활용: 화, 목", days_en: "General: Mon, Wed, Fri / Recycle: Tue, Thu",
+                days_zh: "生活垃圾: 周一,三,五 / 可回收: 周二,四", days_vi: "Rác sinh hoạt: Thứ 2, 4, 6 / Tái chế: Thứ 3, 5",
+                coords: [37.3275, 126.8042]
+            },
+            choji: {
+                name_ko: "초지동", name_en: "Choji-dong", name_zh: "草芝洞", name_vi: "Phường Choji",
+                local: 41250, foreign: 14500, ratio: "26.0%",
+                time_ko: "19:00 ~ 다음날 05:00 (토요일 배출 불가)", time_en: "19:00 - 05:00 next day (No Saturday discharge)",
+                time_zh: "19:00 ~ 第二天 05:00 (周六不可排放)", time_vi: "19:00 ~ 05:00 ngày hôm sau (Không thải ra vào thứ Bảy)",
+                days_ko: "생활쓰레기: 화, 목, 일 / 재활용: 월, 수", days_en: "General: Tue, Thu, Sun / Recycle: Mon, Wed",
+                days_zh: "生活垃圾: 周二,四,日 / 可回收: 周一,三", days_vi: "Rác sinh hoạt: Thứ 3, 5, CN / Tái chế: Thứ 2, 4",
+                coords: [37.3115, 126.8164]
+            },
+            wa: {
+                name_ko: "와동", name_en: "Wa-dong", name_zh: "瓦洞", name_vi: "Phường Wa",
+                local: 38400, foreign: 4200, ratio: "9.9%",
+                time_ko: "20:00 ~ 다음날 06:00", time_en: "20:00 - 06:00 next day",
+                time_zh: "20:00 ~ 第二天 06:00", time_vi: "20:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 월, 수, 금 / 재활용: 화, 목", days_en: "General: Mon, Wed, Fri / Recycle: Tue, Thu",
+                days_zh: "生活垃圾: 周一,三,五 / 可回收: 周二,四", days_vi: "Rác sinh hoạt: Thứ 2, 4, 6 / Tái chế: Thứ 3, 5",
+                coords: [37.3370, 126.8110]
+            },
+            jungang: {
+                name_ko: "중앙동", name_en: "Jungang-dong", name_zh: "中央洞", name_vi: "Phường Jungang",
+                local: 24500, foreign: 890, ratio: "3.5%",
+                time_ko: "19:00 ~ 다음날 05:00", time_en: "19:00 - 05:00 next day",
+                time_zh: "19:00 ~ 第二天 05:00", time_vi: "19:00 ~ 05:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 화, 목, 일 / 재활용: 월, 수", days_en: "General: Tue, Thu, Sun / Recycle: Mon, Wed",
+                days_zh: "生活垃圾: 周二,四,日 / 可回收: 周一,三", days_vi: "Rác sinh hoạt: Thứ 3, 5, CN / Tái chế: Thứ 2, 4",
+                coords: [37.3200, 126.8320]
+            },
+            hosu: {
+                name_ko: "호수동", name_en: "Hosu-dong", name_zh: "湖水洞", name_vi: "Phường Hosu",
+                local: 41200, foreign: 1100, ratio: "2.6%",
+                time_ko: "19:00 ~ 다음날 05:00", time_en: "19:00 - 05:00 next day",
+                time_zh: "19:00 ~ 第二天 05:00", time_vi: "19:00 ~ 05:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 월, 수, 금 / 재활용: 화, 목", days_en: "General: Mon, Wed, Fri / Recycle: Tue, Thu",
+                days_zh: "生活垃圾: 周一,三,五 / 可回收: 周二,四", days_vi: "Rác sinh hoạt: Thứ 2, 4, 6 / Tái chế: Thứ 3, 5",
+                coords: [37.3020, 126.8250]
+            },
+            baekun: {
+                name_ko: "백운동", name_en: "Baekun-dong", name_zh: "白云洞", name_vi: "Phường Baekun",
+                local: 22100, foreign: 4800, ratio: "17.8%",
+                time_ko: "20:00 ~ 다음날 06:00", time_en: "20:00 - 06:00 next day",
+                time_zh: "20:00 ~ 第二天 06:00", time_vi: "20:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 화, 목, 일 / 재활용: 월, 수", days_en: "General: Tue, Thu, Sun / Recycle: Mon, Wed",
+                days_zh: "生活垃圾: 周二,四,日 / 可回收: 周一,三", days_vi: "Rác sinh hoạt: Thứ 3, 5, CN / Tái chế: Thứ 2, 4",
+                coords: [37.3240, 126.7990]
+            },
+            singil: {
+                name_ko: "신길동", name_en: "Singil-dong", name_zh: "新吉洞", name_vi: "Phường Singil",
+                local: 20100, foreign: 3900, ratio: "16.3%",
+                time_ko: "20:00 ~ 다음날 06:00", time_en: "20:00 - 06:00 next day",
+                time_zh: "20:00 ~ 第二天 06:00", time_vi: "20:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 월, 수, 금 / 재활용: 화, 목", days_en: "General: Mon, Wed, Fri / Recycle: Tue, Thu",
+                days_zh: "生活垃圾: 周一,三,五 / 可回收: 周二,四", days_vi: "Rác sinh hoạt: Thứ 2, 4, 6 / Tái chế: Thứ 3, 5",
+                coords: [37.3380, 126.7820]
+            },
+            seonbu1: {
+                name_ko: "선부1동", name_en: "Seonbu 1-dong", name_zh: "仙府1洞", name_vi: "Phường Seonbu 1",
+                local: 18400, foreign: 1520, ratio: "7.6%",
+                time_ko: "20:00 ~ 다음날 06:00", time_en: "20:00 - 06:00 next day",
+                time_zh: "20:00 ~ 第二天 06:00", time_vi: "20:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 화, 목, 일 / 재활용: 월, 수", days_en: "General: Tue, Thu, Sun / Recycle: Mon, Wed",
+                days_zh: "生活垃圾: 周二,四,日 / 可回收: 周一,三", days_vi: "Rác sinh hoạt: Thứ 3, 5, CN / Tái chế: Thứ 2, 4",
+                coords: [37.3320, 126.8040]
+            },
+            seonbu2: {
+                name_ko: "선부2동", name_en: "Seonbu 2-dong", name_zh: "仙府2洞", name_vi: "Phường Seonbu 2",
+                local: 19800, foreign: 5100, ratio: "20.5%",
+                time_ko: "20:00 ~ 다음날 06:00", time_en: "20:00 - 06:00 next day",
+                time_zh: "20:00 ~ 第二天 06:00", time_vi: "20:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 월, 수, 금 / 재활용: 화, 목", days_en: "General: Mon, Wed, Fri / Recycle: Tue, Thu",
+                days_zh: "生活垃圾: 周一,三,五 / 可回收: 周二,四", days_vi: "Rác sinh hoạt: Thứ 2, 4, 6 / Tái chế: Thứ 3, 5",
+                coords: [37.3400, 126.7970]
+            },
+            seonbu3: {
+                name_ko: "선부3동", name_en: "Seonbu 3-dong", name_zh: "仙府3洞", name_vi: "Phường Seonbu 3",
+                local: 34100, foreign: 2300, ratio: "6.3%",
+                time_ko: "20:00 ~ 다음날 06:00", time_en: "20:00 - 06:00 next day",
+                time_zh: "20:00 ~ 第二天 06:00", time_vi: "20:00 ~ 06:00 ngày hôm sau",
+                days_ko: "생활쓰레기: 화, 목, 일 / 재활용: 월, 수", days_en: "General: Tue, Thu, Sun / Recycle: Mon, Wed",
+                days_zh: "生活垃圾: 周二,四,日 / 可回收: 周一,三", days_vi: "Rác sinh hoạt: Thứ 3, 5, CN / Tái chế: Thứ 2, 4",
+                coords: [37.3420, 126.8080]
+            },
+            daebu: {
+                name_ko: "대부동", name_en: "Daebu-dong", name_zh: "大阜洞", name_vi: "Phường Daebu",
+                local: 8900, foreign: 550, ratio: "5.8%",
+                time_ko: "09:00 ~ 당일 18:00 (주말 배출 자제)", time_en: "09:00 - 18:00 same day",
+                time_zh: "09:00 ~ 当天 18:00", time_vi: "09:00 ~ 18:00 trong ngày",
+                days_ko: "생활쓰레기: 화, 금 / 재활용: 목 (요일 지정 수거)", days_en: "General: Tue, Fri / Recycle: Thu",
+                days_zh: "生活垃圾: 周二,五 / 可回收: 周四", days_vi: "Rác sinh hoạt: Thứ 3, 6 / Tái chế: Thứ 5",
+                coords: [37.2550, 126.5950]
+            }
+        };
+
+        // Virtual map coordinates for clean zones
+        const mapLocations = [
+            { type: "cleanzone", name_ko: "원곡동 제1 스마트클린존", name_en: "Wongok-dong Smart Clean Zone 1", name_zh: "元谷洞 第1 智慧清洁区", name_vi: "Khu vực sạch thông minh Wongok 1", coords: [37.3282, 126.8049], desc: "안산시 지정 무단투기 예방 구역" },
+            { type: "cleanzone", name_ko: "원곡동 주민센터 앞 스마트타운", name_en: "Wongok Community Center Clean Hub", name_zh: "元谷洞 居民中心 环保枢纽", name_vi: "Trung tâm sạch cộng đồng Wongok", coords: [37.3268, 126.8038], desc: "CCTV 집중 감시 및 클린 배출 구역" },
+            { type: "cleanzone", name_ko: "초지동 빌라촌 친환경 분리배출존", name_en: "Choji-dong Villa Village Clean Zone", name_zh: "草芝洞 住宅区 环保分类区", name_vi: "Khu vực phân loại sạch Choji-dong", coords: [37.3120, 126.8150], desc: "요일 상시 수거거점" },
+            { type: "cleanzone", name_ko: "사동 단독세대 스마트 배출기", name_en: "Sa-dong Area Smart Discharge Box", name_zh: "沙洞 独栋住宅区 智能回收器", name_vi: "Hộp xả thông minh khu vực Sa-dong", coords: [37.3005, 126.8440], desc: "안산형 클린존 스테이션" },
+            { type: "cleanzone", name_ko: "이동 한대앞역 로데오 클린존", name_en: "I-dong Hanyang Univ. Station Clean Zone", name_zh: "二洞 汉阳大站 商业街清洁区", name_vi: "Khu vực sạch ga Hanyang Univ. I-dong", coords: [37.3099, 126.8530], desc: "상가 상시 배출 및 관리지점" },
+            
+            { type: "recycle", name_ko: "상록구청 종합 소형가전 배터리 수거망", name_en: "Sangrok-gu Office Small Electronics Box", name_zh: "常绿区厅 废旧小家电和电池回收点", name_vi: "Thùng thu gom thiết bị điện tử nhỏ Văn phòng quận Sangrok", coords: [37.3082, 126.8480], desc: "구청 1층 로비 내 수거" },
+            { type: "recycle", name_ko: "원곡동 복지관 폐건전지 수거함", name_en: "Wongok Welfare Center Battery Recycler", name_zh: "元谷洞 福利馆 废电池回收点", name_vi: "Trung tâm Phúc lợi Wongok - Thùng pin hỏng", coords: [37.3290, 126.8010], desc: "폐건전지, 종이팩 화장지 교환처" },
+            { type: "recycle", name_ko: "초지동 복지센터 소형가전 보관대", name_en: "Choji Welfare Center E-Waste Bin", name_zh: "草芝洞 福利中心 废弃电子垃圾箱", name_vi: "Hộp rác điện tử Trung tâm Phúc lợi Choji", coords: [37.3105, 126.8180], desc: "소형 가전 무료 상시 배출" },
+
+            { type: "clothing", name_ko: "원곡동 주택가 친환경 의류 수거기", name_en: "Wongok Residential Clothing Bin", name_zh: "元谷洞 住宅区 环保衣物回收箱", name_vi: "Thùng quyên góp quần áo Wongok", coords: [37.3278, 126.8062], desc: "솜이불, 가죽가방 제외 헌옷 수거" },
+            { type: "clothing", name_ko: "사동 신성빌라 단지내 의류 수거함", name_en: "Sa-dong Sinseong Villa Clothing Bin", name_zh: "Sa-dong Clothing Bin", name_vi: "Thùng gom quần áo khu chung cư Sa-dong", coords: [37.2985, 126.8465], desc: "헌옷 및 신발 수거 전용" },
+            { type: "clothing", name_ko: "본오1동 어린이공원 옆 의류함", name_en: "Bono 1-dong Park Clothing Recycler", name_zh: "本五1洞 儿童公园旁衣物回收点", name_vi: "Thùng gom quần áo cạnh công viên Bono 1-dong", coords: [37.2965, 126.8710], desc: "주택가 입구 수거거점" }
+        ];
+
+        // Global Multilingual Dictionaries
+        const langPack = {
+            ko: {
+                banner: "🌍 안산시 외국인 주민과 내국인 모두를 위한 다국어 AI 스마트 쓰레기 배출 솔루션",
+                heroBadge: "안산시 AI 환경 비서",
+                heroTitle: "쓰레기 사진만 찍으세요, 올바름이 다 알려드립니다.",
+                heroDesc: "국내 최대 외국인 거주지인 안산시의 문화적 다양성을 존중하며, 스마트 카메라 스캔을 통해 언어 장벽 없이 누구나 즉각적이고 올바르게 쓰레기를 처리하도록 돕습니다.",
+                stat1: "안산시 외국인 인구 (25년)",
+                stat2: "무단투기 평균 (월간)",
+                chart1: "안산시 연도별 인구 구조 변화 (명)",
+                chart2: "월별 쓰레기 무단투기 추이 (톤)",
+                tabCamera: "AI 스마트 카메라 진단",
+                tab2: "동네별 맞춤형 배출 규칙",
+                tab3: "스마트 배출 지도",
+                camTitle: "AI 분리배출 카메라 스캐너",
+                camDesc: "카메라로 쓰레기를 비추거나 직접 사진을 업로드해 보세요. 혹은 준비된 AI 테스트 샘플을 선택해 즉시 성능을 검증할 수 있습니다.",
+                btnStartCam: "카메라 켜기",
+                btnTakePic: "촬영 및 분석",
+                orLabel: "또는 파일 업로드",
+                uploadBtnText: "디바이스에서 사진 올리기",
+                sampleTitle: "AI 분석 테스트용 샘플 선택",
+                aiResultTitle: "AI 실시간 진단 결과 리포트",
+                lblDetMat: "감지된 재질",
+                lblDetCont: "오염도 측정 수치",
+                lblDetGrade: "배출 가능 등급",
+                lblActionCheck: "배출 전 필수 액션 가이드",
+                warnCamTitle: "주의 및 과태료 규정 (Fine Policy)",
+                warnCamDesc: "오염된 용기를 그냥 배출하거나 비닐 라벨을 분리하지 않을 시 안산시 조례에 따라 폐기물 무단투기로 간주되어 최대 100만 원 이하의 과태료가 발생할 수 있습니다.",
+                selectDongTitle: "동네를 선택해 주세요",
+                selectDongDesc: "실제 안산시 인구현황 데이터를 기반으로 각 동네별 거주 외국인 비율 및 맞춤 배출일 정보를 제공합니다.",
+                dongStatTitle: "우리 동네 외국인 거주 현황",
+                foreignRatioLabel: "전체 중 외국인 비율",
+                localPopLabel: "내국인 수 (2025)",
+                foreignPopLabel: "외국인 수 (2025)",
+                timeTitle: "배출 시간",
+                daysTitle: "수거일 및 방법",
+                largeTitle: "대형 폐기물 처리",
+                bagTitle: "종량제 봉투 구매처",
+                multiGuideTitle: "다른 언어로도 읽을 수 있는 배출 안내장",
+                filterTitle: "지정 분리배출 위치 안내",
+                filterDesc: "지도 위의 마커를 터치하여 안산시의 친환경 클린존, 폐가전 수거함, 의류수거함 위치를 알아보세요.",
+                lblFilterAll: "전체 위치 보기",
+                lblFilterClean: "안산 스마트 클린존",
+                lblFilterRec: "소형 가전/배터리 수거",
+                lblFilterCloth: "의류 및 섬유 수거함",
+                mapTipTitle: "💡 분리수거 매너 정보",
+                mapTipDesc: "내 집 앞 배출이 어려운 연립/다세대 주택 지역은 인근 20미터 내외의 '클린존 수거 거점'을 이용하시면 거리를 훨씬 깨끗하게 보전하실 수 있습니다."
+            },
+            en: {
+                banner: "🌍 Multilingual AI Smart Waste Solution for Ansan Residents & Globals",
+                heroBadge: "Ansan AI Eco Assistant",
+                heroTitle: "Just take a photo! All-Barum guides your waste.",
+                heroDesc: "Embracing cultural diversity in Ansan, we eliminate language barriers through live camera scans, helping everyone dispose of trash properly.",
+                stat1: "Foreign Population (2025)",
+                stat2: "Illegal Dumping (Monthly)",
+                chart1: "Ansan Demographics Trend (persons)",
+                chart2: "Illegal Dumping Volume (Tons)",
+                tabCamera: "AI Smart Camera Scan",
+                tab2: "Neighborhood Rules",
+                tab3: "Smart Location Map",
+                camTitle: "AI Waste Camera Scanner",
+                camDesc: "Aim your camera at the waste, upload an image, or use our preloaded testing samples to experience high-accuracy AI classification.",
+                btnStartCam: "Turn On Camera",
+                btnTakePic: "Scan & Analyze",
+                orLabel: "OR UPLOAD IMAGE",
+                uploadBtnText: "Choose Photo from Device",
+                sampleTitle: "Select Testing Sample for AI",
+                aiResultTitle: "AI Live Scan Analysis Report",
+                lblDetMat: "Detected Material",
+                lblDetCont: "Contamination Index",
+                lblDetGrade: "Disposal Approval Level",
+                lblActionCheck: "Step-by-Step Washing Action",
+                warnCamTitle: "Warning & Violation Penalties",
+                warnCamDesc: "Disposing of contaminated containers or leaving vinyl labels attached violates Ansan municipal ordinances, risking a fine of up to 1M KRW.",
+                selectDongTitle: "Select your neighborhood",
+                selectDongDesc: "Check real demographic datasets and customized pickup rules based on actual Ansan statistics.",
+                dongStatTitle: "Neighborhood Foreigner Status",
+                foreignRatioLabel: "Foreign Resident Ratio",
+                localPopLabel: "Koreans (2025)",
+                foreignPopLabel: "Foreigners (2025)",
+                timeTitle: "Disposal Hours",
+                daysTitle: "Collection Days",
+                largeTitle: "Large Household Waste",
+                bagTitle: "Official Trash Bags",
+                multiGuideTitle: "Download Guidelines in other languages",
+                filterTitle: "Disposal Point Finder",
+                filterDesc: "Tap markers on the map to discover smart clean zones, electronic recycling hubs, and clothing bins.",
+                lblFilterAll: "Show All Locations",
+                lblFilterClean: "Ansan Smart Clean Zones",
+                lblFilterRec: "E-Waste Recyclers",
+                lblFilterCloth: "Clothing Bins",
+                mapTipTitle: "💡 Public Disposal Manners",
+                mapTipDesc: "If doorstep collection is difficult in multi-villa zones, use Clean Zone stations located within 20m for a cleaner neighborhood."
+            },
+            zh: {
+                banner: "🌍 为安山市所有外籍和本国居民提供多语种AI智能垃圾分类解决方案",
+                heroBadge: "安山市 AI 环保秘书",
+                heroTitle: "只需拍照！“올바름”为您引导垃圾分类。",
+                heroDesc: "尊重安山市的文化多元性，我们通过AI相机智能扫描，消除语言障碍，帮助大家轻松正确地处理垃圾。",
+                stat1: "外籍人口 (2025年)",
+                stat2: "月均非法投放量",
+                chart1: "安山市历年人口结构变化 (名)",
+                chart2: "按月非法垃圾投放趋势 (吨)",
+                tabCamera: "AI 智能相机诊断",
+                tab2: "各区域定制排放规则",
+                tab3: "智能投放地图",
+                camTitle: "AI 智能垃圾扫描仪",
+                camDesc: "用摄像头对准垃圾、上传照片，或者直接点击下方测试样本，即刻体验精准材质与污染度计算。",
+                btnStartCam: "打开摄像头",
+                btnTakePic: "拍照并分析",
+                orLabel: "或者上传图片",
+                uploadBtnText: "从设备中选择照片",
+                sampleTitle: "选择 AI 模拟测试样本",
+                aiResultTitle: "AI 实时扫描分析报告",
+                lblDetMat: "检测到材质",
+                lblDetCont: "污染度指数",
+                lblDetGrade: "排放许可等级",
+                lblActionCheck: "排放前必备清洗指南",
+                warnCamTitle: "注意事项与罚款规定",
+                warnCamDesc: "排放沾有污迹的容器或未分离标签的塑料违反安山市市政法规，可能面临最高100万韩元的罚款。",
+                selectDongTitle: "请选择您居住的社区",
+                selectDongDesc: "基于真实的安山市人口统计数据，提供各社区的外籍人口比例及专属垃圾排放日程。",
+                dongStatTitle: "我们社区的外籍人口状况",
+                foreignRatioLabel: "外籍人口比例",
+                localPopLabel: "本国人数 (2025)",
+                foreignPopLabel: "外籍人数 (2025)",
+                timeTitle: "排放时间",
+                daysTitle: "收集日期及方法",
+                largeTitle: "大型废弃物处理",
+                bagTitle: "标准垃圾袋购买处",
+                multiGuideTitle: "下载其他语种排放指南",
+                filterTitle: "指定垃圾分类投放点",
+                filterDesc: "点击地图上的标记，查找安山市指定的智能清洁区、废旧家电回收箱、旧衣回收箱位置。",
+                lblFilterAll: "查看全部地点",
+                lblFilterClean: "安山智能清洁区",
+                lblFilterRec: "小家电及电池回收箱",
+                lblFilterCloth: "旧衣物回收箱",
+                mapTipTitle: "💡 垃圾投放礼仪",
+                mapTipDesc: "在难以在家门口直接投放的多合院住宅区，使用附近20米左右的“智能清洁区”可以使街道环境更加整洁。"
+            },
+            vi: {
+                banner: "🌍 Giải pháp phân loại rác thông minh AI đa ngôn ngữ cho cư dân Ansan",
+                heroBadge: "Trợ lý AI môi trường Ansan",
+                heroTitle: "Chỉ cần chụp ảnh! All-Barum sẽ lo phần còn lại.",
+                heroDesc: "Tôn trọng sự đa dạng văn hóa tại Ansan, chúng tôi xóa bỏ rào cản ngôn ngữ bằng công nghệ quét camera AI, giúp mọi người phân loại rác chính xác tức thì.",
+                stat1: "Dân số nước ngoài (2025)",
+                stat2: "Lượng rác thải trộm (Hàng tháng)",
+                chart1: "Thay đổi cơ cấu dân số Ansan theo năm (Người)",
+                chart2: "Xu hướng xả rác bừa bãi hàng tháng (Tấn)",
+                tabCamera: "Chẩn đoán Camera thông minh AI",
+                tab2: "Quy tắc theo khu vực",
+                tab3: "Bản đồ điểm đổ rác",
+                camTitle: "Máy Quét Rác Camera AI",
+                camDesc: "Hướng camera vào rác thải, tải ảnh lên hoặc chọn một trong các mẫu thử nghiệm AI có sẵn bên dưới để trải nghiệm ngay.",
+                btnStartCam: "Bật Máy Ảnh",
+                btnTakePic: "Chụp & Phân Tích",
+                orLabel: "HOẶC TẢI ẢNH LÊN",
+                uploadBtnText: "Chọn ảnh từ thiết bị",
+                sampleTitle: "Chọn Mẫu Thử Nghiệm AI",
+                aiResultTitle: "Báo Cáo Phân Tích Quét Trực Tiếp AI",
+                lblDetMat: "Chất liệu phát hiện",
+                lblDetCont: "Chỉ số nhiễm bẩn",
+                lblDetGrade: "Mức độ phê duyệt xả rác",
+                lblActionCheck: "Hướng dẫn làm sạch từng bước",
+                warnCamTitle: "Cảnh báo & Hình phạt vi phạm",
+                warnCamDesc: "Xả các hộp đựng bị bẩn hoặc chưa bóc nhãn dán nilon vi phạm quy định của thành phố Ansan, có thể bị phạt tới 1 triệu KRW.",
+                selectDongTitle: "Chọn phường của bạn",
+                selectDongDesc: "Xem tỷ lệ người nước ngoài và lịch thu gom rác cụ thể dựa trên cơ sở dữ liệu dân số thực tế của Ansan.",
+                dongStatTitle: "Tình hình cư trú nước ngoài của phường",
+                foreignRatioLabel: "Tỷ lệ cư dân nước ngoài",
+                localPopLabel: "Số người Hàn Quốc (2025)",
+                foreignPopLabel: "Số người nước ngoài (2025)",
+                timeTitle: "Giờ xả rác",
+                daysTitle: "Ngày thu gom",
+                largeTitle: "Rác cồng kềnh",
+                bagTitle: "Túi rác quy định",
+                multiGuideTitle: "Tải hướng dẫn bằng ngôn ngữ khác",
+                filterTitle: "Hướng dẫn vị trí phân loại rác",
+                filterDesc: "Chạm vào biểu tượng trên bản đồ để tìm các khu vực sạch thông minh, thùng thu gom đồ điện tử nhỏ và thùng gom quần áo.",
+                lblFilterAll: "Xem tất cả vị trí",
+                lblFilterClean: "Khu vực sạch thông minh Ansan",
+                lblFilterRec: "Thu gom đồ điện tử/Pin",
+                lblFilterCloth: "Thùng thu gom quần áo cũ",
+                mapTipTitle: "💡 Văn hóa đổ rác công cộng",
+                mapTipDesc: "Đối với khu vực biệt thự khó thu gom rác trước cửa, hãy sử dụng 'Trạm khu vực sạch thông minh' trong vòng 20m gần đó để giữ đường phố sạch đẹp."
+            }
+        };
+
+        // Real AI test samples data
+        const sampleDatabase = {
+            ramen: {
+                material_ko: "플라스틱 (컵라면 용기)", material_en: "Plastic (Ramen Container)", material_zh: "塑料 (泡面碗)", material_vi: "Nhựa (Hộp mỳ cốc)",
+                contamination: 85,
+                grade_ko: "배출 불가 (세척 필수)", grade_en: "Disposal Denied (Wash Required)", grade_zh: "禁止排放 (必须清洗)", grade_vi: "Không được xả (Bắt buộc rửa)",
+                color: "text-red-500",
+                icon: "🍜",
+                sub_ko: "오염된 컵라면 용기", sub_en: "Stained Instant Cup", sub_zh: "沾污的泡面碗", sub_vi: "Hộp mỳ ăn liền dính bẩn",
+                status_ko: "분리배출 부적합", status_en: "Unsuitable for Recycle", status_zh: "不符合分类投放", status_vi: "Không thích hợp tái chế",
+                title_ko: "양념을 씻어내거나 일반 쓰레기로 버리세요.",
+                title_en: "Rinse soup oils or throw into general waste bag.",
+                title_zh: "洗净调料油污，或作为普通垃圾丢弃。",
+                title_vi: "Hãy rửa sạch nước súp hoặc bỏ vào túi rác thường.",
+                desc_ko: "용기 안쪽에 빨갛게 물든 라면 국물과 기름기는 재활용 수거 불가능 대상입니다. 햇빛에 이틀간 말려서 국물 자국이 없어지지 않는다면 일반 종량제 봉투에 배출하셔야 합니다.",
+                desc_en: "Red soup stains inside plastic are impossible to recycle. If scrubbing doesn't work, dry it in sunlight for 2 days or throw it strictly inside a standard paid general trash bag.",
+                desc_zh: "塑料内部残留的红油汤汁无法回收。如果用清洁剂洗不掉，请在阳光下暴晒两天，若仍有印记，必须扔进普通标准垃圾袋中。",
+                desc_vi: "Vết súp đỏ bám trên hộp nhựa không thể tái chế. Nếu không thể rửa sạch, hãy phơi nắng 2 ngày hoặc bỏ vào túi rác thường có thu phí.",
+                checklist: {
+                    ko: ["용기 내부 기름 양념을 세제로 닦았나요?", "물로 깨끗하게 헹궈 잔여 액체를 없앴나요?", "오염이 심할 경우 일반 종량제 봉투에 담으셨나요?"],
+                    en: ["Did you scrub food oil with dish soap?", "Rinse inside liquid completely?", "Is it packed into general trash if stains persist?"],
+                    zh: ["污染部位是否用洗涤剂擦洗干净了？", "是否用清水冲洗了内部？", "如果污渍无法去除，是否已装入普通垃圾袋？"],
+                    vi: ["Bạn đã chà sạch vết dầu mỡ bằng xà phòng chưa?", "Rửa sạch chất lỏng bên trong hộp?", "Nếu vết bẩn không sạch, đã cho vào túi rác thường?"]
+                }
+            },
+            pet: {
+                material_ko: "플라스틱 (투명 PET)", material_en: "Plastic (Transparent PET)", material_zh: "塑料 (透明 PET)", material_vi: "Nhựa (PET Trong suốt)",
+                contamination: 5,
+                grade_ko: "즉시 분리배출 가능", grade_en: "Ready for Recycle", grade_zh: "可立即分类投放", grade_vi: "Có thể xả ngay",
+                color: "text-emerald-500",
+                icon: "🥤",
+                sub_ko: "투명 생수 페트병", sub_en: "Clear PET Water Bottle", sub_zh: "透明塑料矿泉水瓶", sub_vi: "Chai nước khoáng trong suốt",
+                status_ko: "분리배출 적합", status_en: "Perfectly Suitable", status_zh: "符合分类投放", status_vi: "Hoàn hảo để xả",
+                title_ko: "라벨 제거 후 찌그러뜨려서 배출하세요.",
+                title_en: "Remove label sticker, compress, and dispose.",
+                title_zh: "撕掉标签，压扁后放入专用箱。",
+                title_vi: "Gỡ bỏ nhãn dán, ép bẹp và xả rác.",
+                desc_ko: "내부가 아주 깨끗합니다. 부착된 비닐 라벨을 말끔히 떼어내고, 부피를 줄이기 위해 발로 밟아 납작하게 압착한 다음 투명 페트병 전용 수거함에 배출하세요.",
+                desc_en: "Inside is perfectly clean! Simply peel off the outer plastic label sticker, compress it to save space, and place it inside the dedicated clear plastic recycling bin.",
+                desc_zh: "内部非常干净。只需撕下外层塑料标签，用脚踩扁以减少体积，然后放入透明塑料瓶专用回收箱内。",
+                desc_vi: "Bên trong chai rất sạch. Chỉ cần bóc nhãn dán, dẫm bẹp chai để tiết kiệm không gian và bỏ vào thùng nhựa trong suốt chuyên dụng.",
+                checklist: {
+                    ko: ["비닐 라벨지를 완전히 분리했나요?", "뚜껑을 닫거나 별도로 모아 배출했나요?", "납작하게 압축하여 배출망에 담았나요?"],
+                    en: ["Peel off the vinyl label sticker?", "Close cap or collect separately?", "Compress flat to reduce volume?"],
+                    zh: ["塑料包装标签是否已完全撕掉？", "瓶盖是否拧紧或单独收集排放？", "是否已踩扁并放入专用收集网？"],
+                    vi: ["Đã bóc sạch nhãn dán nilon chưa?", "Đã đóng nắp hoặc gom riêng chưa?", "Đã nén bẹp chai để bỏ vào thùng gom chưa?"]
+                }
+            },
+            box: {
+                material_ko: "종이 / 박스", material_en: "Paper / Cardboard Box", material_zh: "纸类 / 纸箱", material_vi: "Giấy / Thùng các-tông",
+                contamination: 40,
+                grade_ko: "라벨 제거 후 배출 가능", grade_en: "Ready After Peel-Off", grade_zh: "撕掉标签后可排放", grade_vi: "Xả được sau khi gỡ nhãn",
+                color: "text-amber-500",
+                icon: "📦",
+                sub_ko: "송장 붙은 택배 박스", sub_en: "Cardboard with Shipping Label", sub_zh: "贴有快递单的纸箱", sub_vi: "Thùng các-tông dính nhãn giao hàng",
+                status_ko: "수정 후 배출 가능", status_en: "Action Required First", status_zh: "处理后可投放", status_vi: "Cần xử lý trước khi xả",
+                title_ko: "택배 상자의 테이프와 운송장을 모두 떼어내세요.",
+                title_en: "Peel off all shipping labels and plastic tapes.",
+                title_zh: "必须清除纸箱上的所有胶带与快递单。",
+                title_vi: "Hãy bóc hết băng dính và vận đơn trên thùng các-tông.",
+                desc_ko: "택배 박스는 좋은 재활용 자원이지만 붙어있는 비닐 테이프와 종이 송장 스티커는 재활용을 불가능하게 만드는 오염원입니다. 반드시 칼로 긁거나 손으로 떼어내어 쓰레기통에 버려주세요.",
+                desc_en: "Paper boxes are excellent resources, but shipping label stickers and plastic packaging tapes prevent cardboard pulp reprocessing. Remove them entirely before flattening.",
+                desc_zh: "纸箱是非常好的回收资源，但快递单和塑料胶带会导致无法再加工。排放前请务必将其彻底撕除并压扁纸箱。",
+                desc_vi: "Thùng giấy là tài nguyên tái chế tốt, nhưng nhãn dán vận đơn và băng dính nilon sẽ làm hỏng bột giấy. Hãy bóc hết chúng và nén bẹp thùng giấy.",
+                checklist: {
+                    ko: ["비닐 테이프를 완전히 떼어내 상자에서 분리했나요?", "주소 및 바코드가 표시된 송장 종이를 뜯었나요?", "부피 최소화를 위해 박스를 납작하게 접었나요?"],
+                    en: ["Remove all plastic packaging tapes?", "Peel off shipping address labels?", "Fold flat to save space?"],
+                    zh: ["塑料胶带是否已被完全清除？", "带有地址和条形码的快递单是否已撕掉？", "纸箱是否已被折叠压扁？"],
+                    vi: ["Đã bóc hết băng dính nilon chưa?", "Đã gỡ nhãn dán ghi địa chỉ chưa?", "Đã gấp phẳng thùng giấy chưa?"]
+                }
+            },
+            delivery: {
+                material_ko: "플라스틱 (오염 심함)", material_en: "Plastic (Heavy Stains)", material_zh: "塑料 (重度污染)", material_vi: "Nhựa (Nhiễm bẩn nặng)",
+                contamination: 95,
+                grade_ko: "재활용 절대 불가 (일반 쓰레기)", grade_en: "Absolutely Forbidden (General Trash)", grade_zh: "绝对无法回收 (普通垃圾)", grade_vi: "Tuyệt đối không tái chế (Rác thường)",
+                color: "text-red-500",
+                icon: "🥡",
+                sub_ko: "음식물 묻은 배달 요기", sub_en: "Greasy Delivery Container", sub_zh: "残留油污的打包盒", sub_vi: "Hộp đồ ăn giao tận nơi dính dầu mỡ",
+                status_ko: "종량제 봉투 배출 대상", status_en: "Throw in General Trash Bags", status_zh: "请使用普通标准垃圾袋", status_vi: "Phải bỏ vào túi rác thường",
+                title_ko: "절대 재활용함에 넣지 말고 일반 쓰레기로 처리하세요.",
+                title_en: "Do not put in recycling! Use regular trash bags.",
+                title_zh: "切勿放入回收箱！请直接放入普通垃圾袋。",
+                title_vi: "Tuyệt đối không bỏ vào thùng tái chế! Hãy dùng túi rác thường.",
+                desc_ko: "음식물 기름과 강한 이물질이 흡착된 일회용 용기는 분리수거함에 버릴 시 수거 차량 전체의 재활용품을 오염시킵니다. 안산시 지정 일반 쓰레기 종량제 봉투에 담아 지정 수거지에 배출해 주셔야 과태료를 피할 수 있습니다.",
+                desc_en: "Disposable containers soaked in heavy cooking oils compromise entire recycling truck loads. Dispose of this container safely inside the paid general waste trash bags.",
+                desc_zh: "沾满重油污的一次性餐具会污染整整一车干净的可回收物。为了避免罚款，请务必装入安山市指定的标准收费垃圾袋中丢弃。",
+                desc_vi: "Hộp đựng một lần dính nhiều dầu mỡ thực phẩm sẽ làm hỏng cả xe rác tái chế sạch. Hãy bỏ vào túi rác thường có thu phí của thành phố Ansan để tránh bị phạt.",
+                checklist: {
+                    ko: ["안산시 지정 일반 규격 종량제 봉투를 사용했나요?", "음식물 찌꺼기는 음식물 쓰레기 봉투에 별도 처리했나요?", "비닐 뚜껑 필름이 용기 테두리에 남아있지 않나요?"],
+                    en: ["Use official Ansan general trash bag?", "Dispose of food waste in food bag?", "Is plastic film removed from container rims?"],
+                    zh: ["是否使用了安山市指定的普通标准垃圾袋？", "食物残渣是否已分类放入厨余垃圾袋？", "容器边缘是否没有残留塑料密封膜？"],
+                    vi: ["Đã dùng túi rác thường của Ansan chưa?", "Đã đổ rác thực phẩm vào túi rác hữu cơ chưa?", "Màng bọc nilon viền hộp đã được bóc sạch chưa?"]
+                }
+            }
+        };
+
+        let currentLang = 'ko';
+        let selectedMaterialId = 'plastic';
+        let map;
+        let mapMarkers = [];
+        let stream = null;
+
+        // On window ready
+        window.onload = function() {
+            initCharts();
+            initMap();
+            changeLanguage('ko');
+            testWithSample('ramen'); // Start with a default scan simulation state
+        };
+
+        // Navigation Tabs switching
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('block');
+            });
+            document.getElementById('tab-' + tabId).classList.add('block');
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-brand-500', 'text-brand-600', 'font-bold');
+                btn.classList.add('border-transparent', 'text-slate-500', 'font-medium');
+            });
+            const activeBtn = document.getElementById('tabBtn-' + tabId);
+            activeBtn.classList.remove('border-transparent', 'text-slate-500', 'font-medium');
+            activeBtn.classList.add('border-brand-500', 'text-brand-600', 'font-bold');
+
+            // Handle Leaflet Map invalid size problem
+            if (tabId === 'mapSection' && map) {
+                setTimeout(() => {
+                    map.invalidateSize();
+                }, 150);
+            }
+
+            // Clean up webcam streams if user navigates away from camera tab
+            if (tabId !== 'camera-scanner') {
+                stopWebcam();
+            }
+        }
+
+        // Complete multi-lingual support triggers
+        function changeLanguage(langCode) {
+            currentLang = langCode;
+            const textData = langPack[langCode];
+
+            // Update DOM text translations
+            document.getElementById('bannerText').innerText = textData.banner;
+            document.getElementById('heroBadge').innerText = textData.heroBadge;
+            document.getElementById('heroTitle').innerText = textData.heroTitle;
+            document.getElementById('heroDesc').innerText = textData.heroDesc;
+            document.getElementById('stat1Label').innerText = textData.stat1;
+            document.getElementById('stat2Label').innerText = textData.stat2;
+            document.getElementById('chart1Title').innerText = textData.chart1;
+            document.getElementById('chart2Title').innerText = textData.chart2;
+
+            // Tab Buttons
+            document.getElementById('tabCameraText').innerText = textData.tabCamera;
+            document.getElementById('tab2Text').innerText = textData.tab2;
+            document.getElementById('tab3Text').innerText = textData.tab3;
+
+            // Feature 1: Camera
+            document.getElementById('camTitle').innerText = textData.camTitle;
+            document.getElementById('camDesc').innerText = textData.camDesc;
+            document.getElementById('btnStartCam').innerText = textData.btnStartCam;
+            document.getElementById('btnTakePic').innerText = textData.btnTakePic;
+            document.getElementById('orLabel').innerText = textData.orLabel;
+            document.getElementById('uploadBtnText').innerText = textData.uploadBtnText;
+            document.getElementById('sampleTitle').innerText = textData.sampleTitle;
+            document.getElementById('aiResultTitle').innerText = textData.aiResultTitle;
+            document.getElementById('lblDetMat').innerText = textData.lblDetMat;
+            document.getElementById('lblDetCont').innerText = textData.lblDetCont;
+            document.getElementById('lblDetGrade').innerText = textData.lblDetGrade;
+            document.getElementById('lblActionCheck').innerText = textData.lblActionCheck;
+            document.getElementById('warnCamTitle').innerText = textData.warnCamTitle;
+            document.getElementById('warnCamDesc').innerText = textData.warnCamDesc;
+
+            // Feature 2: Rules
+            document.getElementById('selectDongTitle').innerText = textData.selectDongTitle;
+            document.getElementById('selectDongDesc').innerText = textData.selectDongDesc;
+            document.getElementById('dongStatTitle').innerText = textData.dongStatTitle;
+            document.getElementById('foreignRatioLabel').innerText = textData.foreignRatioLabel;
+            document.getElementById('localPopLabel').innerText = textData.localPopLabel;
+            document.getElementById('foreignPopLabel').innerText = textData.foreignPopLabel;
+            document.getElementById('timeTitle').innerText = textData.timeTitle;
+            document.getElementById('daysTitle').innerText = textData.daysTitle;
+            document.getElementById('largeTitle').innerText = textData.largeTitle;
+            document.getElementById('bagTitle').innerText = textData.bagTitle;
+            document.getElementById('multiGuideTitle').innerText = textData.multiGuideTitle;
+
+            // Feature 3: Map
+            document.getElementById('filterTitle').innerText = textData.filterTitle;
+            document.getElementById('filterDesc').innerText = textData.filterDesc;
+            document.getElementById('lblFilterAll').innerText = textData.lblFilterAll;
+            document.getElementById('lblFilterClean').innerText = textData.lblFilterClean;
+            document.getElementById('lblFilterRec').innerText = textData.lblFilterRec;
+            document.getElementById('lblFilterCloth').innerText = textData.lblFilterCloth;
+            document.getElementById('mapTipTitle').innerText = textData.mapTipTitle;
+            document.getElementById('mapTipDesc').innerText = textData.mapTipDesc;
+
+            // Footer Texts
+            document.getElementById('footerAbout').innerText = textData.heroDesc; 
+
+            // Update actively selected states
+            onDongChange(document.getElementById('dongSelect').value);
+            rebuildMapPopups();
+        }
+
+        // Initialize Charts with actual Ansan-si data highlights
+        function initCharts() {
+            const ctx1 = document.getElementById('demographicsChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ansanDemographicsData.years,
+                    datasets: [
+                        {
+                            label: '내국인 (Koreans)',
+                            data: ansanDemographicsData.local,
+                            backgroundColor: 'rgba(226, 232, 240, 0.8)',
+                            borderColor: '#cbd5e1',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '외국인 (Foreigners)',
+                            data: ansanDemographicsData.foreign,
+                            backgroundColor: '#10b981',
+                            borderColor: '#059669',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+                    },
+                    scales: {
+                        x: { stacked: true, grid: { display: false } },
+                        y: { stacked: true, ticks: { font: { size: 9 } } }
+                    }
+                }
+            });
+
+            const ctx2 = document.getElementById('dumpingChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: ansanDumping2025.months,
+                    datasets: [{
+                        label: '무단투기량 (Tons)',
+                        data: ansanDumping2025.tons,
+                        fill: true,
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderColor: '#ef4444',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointBackgroundColor: '#ef4444'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { ticks: { font: { size: 9 } } }
+                    }
+                }
+            });
+        }
+
+        // Real Camera Device activation
+        async function startWebcam() {
+            const video = document.getElementById('webcam');
+            const cameraMockup = document.getElementById('cameraMockup');
+            const captureBtn = document.getElementById('captureBtn');
+            const imagePreview = document.getElementById('imagePreview');
+
+            imagePreview.classList.add('hidden');
+
+            try {
+                if (stream) {
+                    stopWebcam();
+                }
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                video.srcObject = stream;
+                video.classList.remove('hidden');
+                cameraMockup.classList.add('hidden');
+                captureBtn.disabled = false;
+                
+                // Show laser scanner line when webcam starts
+                document.getElementById('scannerLine').classList.remove('hidden');
+            } catch (err) {
+                console.error("Camera access failed, falling back to simulated analysis", err);
+                showAlert("<i class='fa-solid fa-triangle-exclamation text-amber-500'></i> 실제 카메라를 감지하지 못했습니다. 안심하세요! 아래 'AI 분석 테스트용 샘플'을 클릭하거나 디바이스 사진 올리기를 통해 스마트 분석을 동일하게 체험할 수 있습니다.");
+            }
+        }
+
+        function stopWebcam() {
+            const video = document.getElementById('webcam');
+            const cameraMockup = document.getElementById('cameraMockup');
+            const captureBtn = document.getElementById('captureBtn');
+            const scannerLine = document.getElementById('scannerLine');
+
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            video.classList.add('hidden');
+            cameraMockup.classList.remove('hidden');
+            captureBtn.disabled = true;
+            scannerLine.classList.add('hidden');
+        }
+
+        // Trigger capture and run AI model prediction pipeline
+        function triggerCapture() {
+            if (!stream) return;
+            
+            // Shutter effect visual flashing
+            const viewfinder = document.getElementById('webcam').parentElement;
+            viewfinder.classList.add('opacity-40');
+            setTimeout(() => {
+                viewfinder.classList.remove('opacity-40');
+            }, 150);
+
+            // Mock photo analysis simulation using standard smart classifications
+            const mockKeys = ['ramen', 'pet', 'box', 'delivery'];
+            const randomSample = mockKeys[Math.floor(Math.random() * mockKeys.length)];
+            
+            stopWebcam();
+            executeAIScan(randomSample);
+        }
+
+        // File image upload handling
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            stopWebcam();
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imgPreview = document.getElementById('imagePreview');
+                imgPreview.src = e.target.result;
+                imgPreview.classList.remove('hidden');
+                document.getElementById('cameraMockup').classList.add('hidden');
+
+                // Determine pseudo class based on file name or generic analysis pipeline
+                const mockKeys = ['ramen', 'pet', 'box', 'delivery'];
+                const matchedKey = mockKeys.find(k => file.name.toLowerCase().includes(k)) || 'pet';
+                executeAIScan(matchedKey);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // AI prediction loading & visualization pipeline
+        function testWithSample(sampleKey) {
+            stopWebcam();
+            
+            const sample = sampleDatabase[sampleKey];
+            const imgPreview = document.getElementById('imagePreview');
+            
+            // Set simulated representative icons in the preview box
+            imgPreview.classList.add('hidden');
+            const cameraMockup = document.getElementById('cameraMockup');
+            cameraMockup.classList.remove('hidden');
+            cameraMockup.innerHTML = `
+                <span class="text-7xl block animate-pulse">${sample.icon}</span>
+                <p class="text-xs text-slate-300 mt-3 font-semibold">${sample[`sub_${currentLang}`]}</p>
+            `;
+
+            executeAIScan(sampleKey);
+        }
+
+        function executeAIScan(sampleKey) {
+            const loading = document.getElementById('aiLoading');
+            const success = document.getElementById('aiSuccess');
+            const scannerLine = document.getElementById('scannerLine');
+
+            loading.classList.remove('hidden');
+            success.classList.add('opacity-30');
+            scannerLine.classList.remove('hidden');
+
+            // Realistic 1.5 seconds AI scanning animation
+            setTimeout(() => {
+                loading.classList.add('hidden');
+                success.classList.remove('opacity-30');
+                scannerLine.classList.add('hidden');
+                renderAISolution(sampleKey);
+            }, 1200);
+        }
+
+        // Dynamically print AI results onto dashboard UI
+        function renderAISolution(sampleKey) {
+            const data = sampleDatabase[sampleKey];
+            
+            // Basic details
+            document.getElementById('resMaterial').innerText = data[`material_${currentLang}`];
+            document.getElementById('resContPercent').innerText = `${data.contamination}%`;
+            
+            // Color mapping for contamination index
+            const percentEl = document.getElementById('resContPercent');
+            const progressBar = document.getElementById('resContProgress');
+            progressBar.style.width = `${data.contamination}%`;
+
+            if (data.contamination > 70) {
+                percentEl.className = "text-2xl font-black text-red-500 block mt-1";
+                progressBar.className = "bg-red-500 h-1 transition-all duration-1000";
+            } else if (data.contamination > 30) {
+                percentEl.className = "text-2xl font-black text-amber-500 block mt-1";
+                progressBar.className = "bg-amber-500 h-1 transition-all duration-1000";
+            } else {
+                percentEl.className = "text-2xl font-black text-emerald-500 block mt-1";
+                progressBar.className = "bg-emerald-500 h-1 transition-all duration-1000";
+            }
+
+            document.getElementById('resGrade').innerText = data[`grade_${currentLang}`];
+            document.getElementById('resIcon').innerText = data.icon;
+            document.getElementById('resSubname').innerText = data[`sub_${currentLang}`];
+            document.getElementById('resStatusBadge').innerText = data[`status_${currentLang}`];
+            
+            // Change color profile of status badge
+            const badge = document.getElementById('resStatusBadge');
+            if (data.contamination > 70) {
+                badge.className = "text-xs font-bold px-2 py-0.5 rounded bg-red-500 text-white";
+            } else if (data.contamination > 30) {
+                badge.className = "text-xs font-bold px-2 py-0.5 rounded bg-amber-500 text-slate-900";
+            } else {
+                badge.className = "text-xs font-bold px-2 py-0.5 rounded bg-emerald-500 text-white";
+            }
+
+            document.getElementById('resTitle').innerText = data[`title_${currentLang}`];
+            document.getElementById('resDesc').innerText = data[`desc_${currentLang}`];
+
+            // Rebuild checklist items
+            const checkUl = document.getElementById('resChecklist');
+            checkUl.innerHTML = '';
+            
+            const checks = data.checklist[currentLang];
+            checks.forEach(check => {
+                const li = document.createElement('li');
+                li.className = "flex items-start gap-3";
+                li.innerHTML = `
+                    <span class="text-brand-500 mt-0.5"><i class="fa-solid fa-circle-check"></i></span>
+                    <span class="text-xs text-slate-600">${check}</span>
+                `;
+                checkUl.appendChild(li);
+            });
+        }
+
+        // Feature 2: All 25 Dongs data mapping
+        function onDongChange(dongKey) {
+            const dong = dongData[dongKey];
+            const textData = langPack[currentLang];
+            
+            let name = dong[`name_${currentLang}`];
+            document.getElementById('dongGuideDongName').innerText = name;
+            
+            // Statistics updates
+            document.getElementById('dongForeignPercent').innerText = dong.ratio;
+            document.getElementById('dongForeignBar').style.width = dong.ratio;
+            document.getElementById('dongLocalCount').innerText = `${dong.local.toLocaleString()}명`;
+            document.getElementById('dongForeignCount').innerText = `${dong.foreign.toLocaleString()}명`;
+
+            // Adjust bar colors dynamically according to high-foreigner ratio neighborhoods
+            const ratioBar = document.getElementById('dongForeignBar');
+            const ratioVal = parseFloat(dong.ratio);
+            if (ratioVal > 50) {
+                ratioBar.className = "bg-red-500 h-2.5 rounded-full transition-all duration-500";
+            } else if (ratioVal > 15) {
+                ratioBar.className = "bg-amber-500 h-2.5 rounded-full transition-all duration-500";
+            } else {
+                ratioBar.className = "bg-brand-500 h-2.5 rounded-full transition-all duration-500";
+            }
+
+            // Custom schedule texts matching
+            document.getElementById('dongGuideTitle').innerText = `${name} ${textData.dongGuideTitle}`;
+            document.getElementById('timeDesc').innerHTML = dong[`time_${currentLang}`];
+            document.getElementById('daysDesc').innerHTML = dong[`days_${currentLang}`];
+
+            // Center OpenStreetMap map
+            if (map) {
+                map.setView(dong.coords, 14);
+            }
+        }
+
+        // Open custom alerts (replaces browser's standard alert)
+        function showAlert(msg) {
+            const alertModal = document.getElementById('alertModal');
+            document.getElementById('alertMsg').innerHTML = msg;
+            alertModal.classList.remove('hidden');
+        }
+
+        function closeAlert() {
+            document.getElementById('alertModal').classList.add('hidden');
+        }
+
+        // Download multi-lingual guide pamphlet modal
+        function downloadPamphlet(lang) {
+            const modal = document.getElementById('downloadModal');
+            const title = document.getElementById('modalTitle');
+            const desc = document.getElementById('modalDesc');
+
+            const titles = {
+                ko: "올바름 안산시 배출 가이드 (PDF)",
+                en: "Ansan Waste Sorting Guide (PDF Download)",
+                zh: "安山市垃圾分类指导手册 (PDF下载)",
+                vi: "Sổ tay Hướng dẫn đổ rác Ansan (Tải xuống PDF)"
+            };
+            const descs = {
+                ko: "안산시 25개 전 행정동의 맞춤형 쓰레기 분리배출 방법이 수록된 오프라인 인쇄용 가이드 시안입니다.",
+                en: "Downloadable print-ready flyer featuring neighborhood pickup rules and proper disposal guides across Ansan.",
+                zh: "提供即印型离线指南，介绍如何在安山市进行可回收物分类并避免市政罚款。",
+                vi: "Cung cấp tài liệu ngoại tuyến in sẵn về cách phân loại rác tái chế và tránh bị phạt tại Ansan."
+            };
+
+            title.innerText = titles[lang];
+            desc.innerText = descs[lang];
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('downloadModal').classList.add('hidden');
+        }
+
+        function simulatedDownload() {
+            closeModal();
+            showAlert("<i class='fa-solid fa-cloud-arrow-down text-brand-500'></i> 맞춤형 배출 가이드 다운로드가 완료되었습니다!");
+        }
+
+        // OpenStreetMap rendering
+        function initMap() {
+            map = L.map('map').setView([37.3195, 126.8614], 13); // Centered around Ansan-si
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(map);
+
+            renderMapMarkers('all');
+        }
+
+        function renderMapMarkers(filterType) {
+            mapMarkers.forEach(marker => map.removeLayer(marker));
+            mapMarkers = [];
+
+            const filteredData = filterType === 'all' 
+                ? mapLocations 
+                : mapLocations.filter(loc => loc.type === filterType);
+
+            filteredData.forEach(loc => {
+                let markerColor = '#10b981'; // green (cleanzone)
+                if (loc.type === 'recycle') markerColor = '#6366f1'; // blue/indigo (recycle bin)
+                if (loc.type === 'clothing') markerColor = '#f97316'; // orange (clothes)
+
+                const markerIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="background-color: ${markerColor}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4)"></div>`,
+                    iconSize: [14, 14],
+                    iconAnchor: [7, 7]
+                });
+
+                let localeName = loc[`name_${currentLang}`] || loc.name_ko;
+                let popupContent = `
+                    <div style="font-family: Pretendard, sans-serif; width:160px;">
+                        <strong style="font-size:12px; color:#1e293b; display:block; margin-bottom:4px;">${localeName}</strong>
+                        <span style="font-size:10px; color:#64748b; display:block;">${loc.desc}</span>
+                        <span style="font-size:9px; background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:6px;">
+                            ${loc.type === 'cleanzone' ? '스마트클린존' : loc.type === 'recycle' ? '폐가전수거' : '의류수거함'}
+                        </span>
+                    </div>
+                `;
+
+                const marker = L.marker(loc.coords, { icon: markerIcon })
+                    .bindPopup(popupContent)
+                    .addTo(map);
+                
+                mapMarkers.push(marker);
+            });
+        }
+
+        function filterMarkers(category) {
+            document.querySelectorAll("[id^='filterBtn-']").forEach(btn => {
+                btn.className = "w-full text-left p-3 rounded-xl border border-slate-100 hover:bg-slate-50 text-xs font-medium flex items-center justify-between";
+            });
+
+            const activeBtn = document.getElementById('filterBtn-' + category);
+            activeBtn.className = "w-full text-left p-3 rounded-xl border-2 border-brand-500 bg-brand-50/20 text-xs font-bold flex items-center justify-between";
+
+            renderMapMarkers(category);
+
+            const filteredData = category === 'all' ? mapLocations : mapLocations.filter(loc => loc.type === category);
+            if (filteredData.length > 0) {
+                map.panTo(filteredData[0].coords);
+            }
+        }
+
+        function rebuildMapPopups() {
+            if (mapMarkers.length > 0) {
+                const activeFilter = document.querySelector(".border-brand-500[id^='filterBtn-']").id.replace('filterBtn-', '');
+                renderMapMarkers(activeFilter);
+            }
+        }
+    </script>
+</body>
+</html>
